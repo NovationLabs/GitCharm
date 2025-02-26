@@ -1,0 +1,173 @@
+#!/usr/bin/env python3.10
+
+from datetime import datetime
+from prompt_toolkit import prompt
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.shortcuts import print_formatted_text
+
+import subprocess
+import os, sys
+
+pink    =   "#F780E2"
+purple  =   "#5A56E0"
+green   =   "#54FFCF"
+gray    =   "#44475A"
+red     =   "#ff3217"
+dark_gray   =   "#282A36"
+#ansigreen
+
+def interruption():
+    print("\033[1;31m")
+    print("╭────────────────────╮")
+    print("│ Operation Canceled │")
+    print("╰────────────────────╯")
+    print("\033[0m")
+    sys.exit(1)
+
+def text_color(text, hex_color, bold=False):
+    if bold:
+        return f'<b><style fg="{hex_color}">{text}</style></b>'
+    else:
+        return f'<style fg="{hex_color}">{text}</style>'
+    
+def up_to_date(col):
+    up  = text_color("╭ Everything up to date ──╮\n", green)
+    down = text_color("╰─────────────────────────╯", green)
+
+    print_formatted_text(HTML(f"{col} {up}{col} {down}"))
+
+def key_info():
+    toggle_key  = text_color("←/→", gray)
+    next_key    = text_color("Enter", gray)
+    cancel_key  = text_color("Ctrl+C", gray)
+    toggle      = text_color("toggle", dark_gray)
+    next        = text_color("next", dark_gray)
+    cancel      = text_color("cancel", dark_gray)
+    dot         = text_color("•", dark_gray)
+    
+
+    print_formatted_text(HTML(f"{toggle_key} {toggle} {dot} {next_key} {next} {dot} {cancel_key} {cancel}"))
+
+def git_status():
+    result = subprocess.run(['git', 'status', '-sb'], capture_output=True, text=True)
+    output = result.stdout
+
+    branch = ""
+    files = []
+
+    for line in output.splitlines():
+        if line.startswith("##"):
+            branch = line.split("...")[0].strip().replace("##", "").strip()
+        else :
+            file_name = line[3:].strip()
+            files.append(file_name)
+
+    return branch, files
+
+def title(branch_):
+    text = "Github Push"
+    top     = text_color("╭" + "─"*(len(text + " ( ) " + branch_)) + "╮\n", pink)
+    side_left = text_color("│ ", pink)
+    side_right= text_color(" │\n", pink)
+    bottom  = text_color("╰" + "─"*(len(text + " ( ) " + branch_)) + "╯\n", pink)
+
+    title   = text_color(f"{text}", green, bold=True)
+    branch  = text_color(f"{branch_}", purple)
+
+    text = f"{title} ({branch})"
+
+    result = f"{top}{side_left}{text}{side_right}{bottom}"
+
+    print_formatted_text(HTML(result))
+
+def commit(col):
+    prompt_symbol = text_color("> ", pink)
+    placeholder = text_color("[Type your commit title here]", dark_gray)
+
+    result = prompt(
+        message=HTML(f"{col}{prompt_symbol}"),
+        placeholder=HTML(f"{placeholder}"),
+    )
+
+    if not result:
+        now = datetime.now()
+        formatted_date = now.strftime("%Y-%m-%d %H:%M:%S")
+        result = f"GitCharm Commit : {formatted_date}"
+
+        print_formatted_text(HTML(f"{col}  <b>Title is empty. Used '{result}' as the title</b>"))
+
+    return result
+
+def files(col, files):
+
+    title = " Modified File(s) "
+    horizontal = "─"
+    title_width = len(title)
+    max_width = max(len(file) for file in files)
+    width = max(max_width, title_width) + 4
+
+    box_top = text_color(f"╭{title}{horizontal * (width - title_width)}╮", pink) 
+    box_bottom = text_color(f"╰{horizontal * width}╯", pink)
+    vertical = text_color("│", pink)
+
+    print_formatted_text(HTML(f"{col} {box_top}"))
+
+    for file in files:
+        file_name = text_color(f"✔️ {file}", green) 
+        spaces = " " * (width - len(file) - 3)
+        print_formatted_text(HTML(f"{col} {vertical} {file_name}{spaces}{vertical}"))
+
+    print_formatted_text(HTML(f"{col} {box_bottom}"))
+
+    print_formatted_text(HTML(col))
+    confirm = text_color("Press Enter to confirm • Ctrl+C to cancel", purple, bold=True)
+    prompt(message=HTML(f"{col}{confirm}"))
+
+def success():
+    up   = text_color("╭────────────────────╮\n", green)
+    mid  = text_color("│ Push successful ✨ │\n", green)
+    down = text_color("╰────────────────────╯", green)
+
+    print_formatted_text(HTML(f"{up}{mid}{down}"))
+
+def git_push(col, commit_message):
+    error = text_color("Error Push", "#FF0000", bold=True)
+
+    #print_formatted_text(HTML(f"{col} <b>Running: git add</b>"))
+    os.system("git add .")
+
+    #print_formatted_text(HTML(f"{col} <b>Running: git commit</b>"))
+    os.system(f"git commit -m \"{commit_message}\" > /dev/null 2>&1")
+
+    #print_formatted_text(HTML(f"{col} <b>Running: git push</b>"))
+    result = os.system("git push > /dev/null 2>&1")
+
+    if result:
+        print_formatted_text(HTML(error))
+    else:
+        success()
+
+
+
+def main():
+    os.system("clear")
+    col = text_color("┃ ", gray)
+    branch, modified = git_status()
+    key_info()
+
+    title(branch)
+    if not modified:
+        up_to_date(col)
+        return
+    commit_message = commit(col)
+    print_formatted_text(HTML(col))
+    files(col, modified)
+    print()
+    git_push(col, commit_message)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        interruption()
