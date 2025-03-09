@@ -16,7 +16,7 @@
 ### Installation
 1. Clone the repository:
 ```
-git clone https://github.com/xmarano/gitcharm.git
+git clone https://github.com/novationlabs/gitcharm.git
 ```
 
 2. Move the script to `/usr/local/bin` to make it a globally available command:
